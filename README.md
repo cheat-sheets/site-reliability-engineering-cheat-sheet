@@ -42,6 +42,8 @@ A few issues to consider when determining target level of availability:
     - If there are competitors in the marketplace, what level of service do those competitors provide?
     - Is this service targeted at consumers, or at enterprises?
 
+#### SLIs, SLOs, SLAs 
+
 - **SLI (Service Level Indicator)** - a carefully defined quantitative measure of some aspect of the level of 
 service that is provided. Examples: request latency, error rate, system throughput.
 - **SLO (Service Level Objective)** a target value or range of values for a service level that is measured by an SLI. 
@@ -60,6 +62,20 @@ budget is 100% minus the SLO.
 - Making all of your SLIs follow a consistent style allows you to take better advantage of tooling: you can write 
 alerting logic, SLO analysis tools, error budget calculation, and reports to expect the same inputs: 
 numerator, denominator, and threshold. Simplification is a bonus here.
+
+There are two types of SLOs:
+- **Request-based SLOs** - based on an SLI that is defined as the ratio of the number of good requests to 
+the total number of requests. 
+    - **"Latency is below 100 ms for at least 95% of requests."** A good request is one with a response time less 
+    than 100 ms, so the measure of compliance is the fraction of requests with response times under 100 ms. 
+- **Windows-based SLOs** - based on an SLI defined as the ratio of the number of measurement intervals that meets 
+some goodness criterion to the total number of intervals.
+    - **"The 95th percentile latency metric is less than 100 ms for at least 99% of 10-minute windows"**. 
+    A good measurement period is a 10-minute span in which 95% of the requests have latency under 100 ms.
+    
+There are two types of compliance periods for SLOs:
+- **Calendar-based** periods (from date to date).
+- **Rolling periods** (from n days ago to now, where n ranges from 1 to 30 days).
  
 ### [Example SLO document](https://landing.google.com/sre/workbook/chapters/slo-document/)
 
@@ -136,6 +152,7 @@ numerator, denominator, and threshold. Simplification is a bonus here.
   </tr>
 </table>
 
+#### Error Budgets
 
 **Error budgets** are a tool for balancing reliability with other engineering work, and a great way to decide 
 which projects will have the most impact. 
@@ -180,7 +197,118 @@ a budget of 1,000 errors over that period.
 - Don't over-rely on 3rd party services. Chubby had too good of SLIs and users over-relied on it. 
   They had to make planned service outages to prevent it.
 
-**Monitoring**
+#### Alerting on SLOs**:
+
+https://landing.google.com/sre/workbook/chapters/alerting-on-slos/
+
+Your goal is to be notified for a significant event: **an event that consumes a large fraction of the error budget**.
+
+Consider the following attributes when evaluating an alerting strategy:
+- **Precision** - the proportion of events detected that were significant. The fewer false positives the higher the precision.
+- **Recall** - the proportion of significant events detected. The fewer false negatives the higher the recall.
+- **Detection time** - how long it takes to send notifications in various conditions. 
+  Long detection times can negatively impact the error budget.
+- **Reset time** - how long alerts fire after an issue is resolved. 
+  Long reset times can lead to confusion or to issues being ignored.
+  
+**Burn rate** is how fast, relative to the SLO, the service consumes the error budget. 
+- Burn rate of 1 means that it's consuming error budget at a rate that leaves you with exactly 0 budget at the end 
+  of the SLO's time window.
+- With 100% downtime the burn rate is `1 / ((100% - SLO) * 100)`.
+
+| Burn rate | Error rate for a 99.9% SLO | Time to exhaustion |
+| --- | --- | ---  |
+| 1 | 0.1% | 30 days |
+| 2 | 0.2% | 15 days |
+| 10 | 1% | 3 days |
+| 1000 | 100% | 43 minutes |
+  
+Ways to alert on significant events:
+
+- 1: Target Error Rate ≥ SLO Threshold. For example, if the SLO is 99.9% over 30 days, alert if the error rate over the previous 10 minutes is ≥ 0.1%:
+    - `expr: job:slo_errors_per_request:ratio_rate10m{job="myjob"} >= 0.001`.
+    - Cons: Precision is low: The alert fires on many events that do not threaten the SLO. 
+      A 0.1% error rate for 10 minutes would alert, while consuming only 0.02% of the monthly error budget.
+- 2: Increased Alert Window. To keep the rate of alerts manageable, you decide to be notified only if an event 
+consumes 5% of the 30-day error budget — a 36-hour window.
+    - `expr: job:slo_errors_per_request:ratio_rate36h{job="myjob"} > 0.001`.
+    - Cons:
+        - Very poor reset time: In the case of 100% outage, an alert will fire shortly after 2 minutes, 
+          and continue to fire for the next 36 hours.
+        - Calculating rates over longer windows can be expensive in terms of memory or I/O operations, 
+          due to the large number of data points.
+- 3: Incrementing Alert Duration. Most monitoring systems allow you to add a duration parameter to the alert criteria 
+so the alert won’t fire unless the value remains above the threshold for some time.
+    - `expr: job:slo_errors_per_request:ratio_rate1m{job="myjob"} > 0.001; for: 1h'`.
+    - Cons:
+        - Poor recall and poor detection time: Because the duration does not scale with the severity of the incident, 
+          a 100% outage alerts after one hour, the same detection time as a 0.2% outage.
+        - If the metric even momentarily returns to a level within SLO, the duration timer resets. 
+          An SLI that fluctuates between missing SLO and passing SLO may never alert.
+- 4: Alert on Burn Rate. 
+    - `job:slo_errors_per_request:ratio_rate1h{job="myjob"} > (36*0.001)` 
+    - Cons:
+        - Low recall: A 35x burn rate never alerts, but consumes all of the 30-day error budget in 20.5 hours.
+        - Reset time: 58 minutes is still too long.
+- 5: Multiple Burn Rate Alerts.
+    - ```expr: (
+                 job:slo_errors_per_request:ratio_rate1h{job="myjob"} > (14.4*0.001)
+               or
+                 job:slo_errors_per_request:ratio_rate6h{job="myjob"} > (6*0.001)
+               )
+         severity: page
+         
+         expr: job:slo_errors_per_request:ratio_rate3d{job="myjob"} > 0.001
+         severity: ticket```
+    - Cons:
+        - More numbers, window sizes, and thresholds to manage and reason about.
+        - An even longer reset time, as a result of the three-day window.
+        - To avoid multiple alerts from firing if all conditions are true, you need to implement alert suppression.
+- 6: Multiwindow, Multi-Burn-Rate Alerts.
+    - ``` expr: (
+               job:slo_errors_per_request:ratio_rate1h{job="myjob"} > (14.4*0.001)
+             and
+               job:slo_errors_per_request:ratio_rate5m{job="myjob"} > (14.4*0.001)
+             )
+           or
+             (
+               job:slo_errors_per_request:ratio_rate6h{job="myjob"} > (6*0.001)
+             and
+               job:slo_errors_per_request:ratio_rate30m{job="myjob"} > (6*0.001)
+             )
+       severity: page
+       
+       expr: (
+               job:slo_errors_per_request:ratio_rate24h{job="myjob"} > (3*0.001)
+             and
+               job:slo_errors_per_request:ratio_rate2h{job="myjob"} > (3*0.001)
+             )
+           or
+             (
+               job:slo_errors_per_request:ratio_rate3d{job="myjob"} > 0.001
+             and
+               job:slo_errors_per_request:ratio_rate6h{job="myjob"} > 0.001
+             )
+       severity: ticket``` 
+    - Cons:
+        - Lots of parameters to specify, which can make alerting rules hard to manage.   
+
+**Fast-burn / slow-burn** strategy described here https://cloud.google.com/monitoring/service-monitoring/alerting-on-budget-burn-rate#burn-rates
+corresponds to strategy 5 above.
+  
+
+**Notes**:
+- GCP's Monitoring service allows alerting on burn rate: 
+https://cloud.google.com/monitoring/service-monitoring/alerting-on-budget-burn-rate,
+https://cloud.google.com/monitoring/service-monitoring#slo-types.
+- Extreme availability SLOs. With target monthly availability of 99.999% a 100% outage would exhaust its budget
+in 26 seconds - not enough to react. The only way to defend this level of reliability is to design the system so that
+the chance of a 100% outage is extremely low. For example if you roll out a change to 1% of the machines you will have 
+43 minutes before you exhaust your error budget. 
+- [Availability Table](https://landing.google.com/sre/sre-book/chapters/availability-table/#appendix_table-of-nines).
+
+
+#### Monitoring
 
 The 4 golden signals: 
 - **Latency**. The time it takes to service a request. 
@@ -209,18 +337,30 @@ system logs after the fact.
 so you should also monitor responses coming from direct dependencies.
 - Monitor saturation: 
     - resources with hard limits: RAM, disk, or CPU quota; 
-    - resources without hard limits: open file descriptors, active threads in any thread pools, waiting times in queues, or the volume of written logs.
+    - resources without hard limits: open file descriptors, active threads in any thread pools, waiting times in queues, 
+      or the volume of written logs.
     - programming language specific metrics: the heap and metaspace size for Java, the number of goroutines for Go.  
 - Test alerting logic: https://landing.google.com/sre/workbook/chapters/monitoring/#testing-alerting-logic.
-
-**Alerting on SLOs**:
 
 
 ### 2. Eliminating Toil
 
 
-
 ### 3. Simplicity
+
+
+## Practices
+
+1. On-call, incident response, post-mortem culture.
+2. Managing Load.
+3. Configuration Management.
+4. Reliability Testing.
+
+## Processes
+
+1. Organizational Change
+2. 
+
 
 
 **Notes**:
