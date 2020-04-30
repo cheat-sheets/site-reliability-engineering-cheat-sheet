@@ -22,9 +22,15 @@ DevOps is more holistically defined and has many goals including quality, reliab
 while SRE focuses primarily on reliability and everything else is implied. SRE is deeper in this sense and DevOps
 is broader.
 
+### Table of Contents
+
+- [Foundations](#foundations)
+- [Practices](#practices)
+- [Processes](#processes)
+
 ## Foundations
 
-### 1. Embracing Risk (SLOs, Error Budgets, Monitoring)
+### 1. Embracing Risk (SLOs, Error Budgets, Monitoring, Alerting)
 
 - Service failures can have many potential effects, including user dissatisfaction, harm, or loss of trust; 
 direct or indirect revenue loss; brand or reputational impact; and undesirable press coverage.
@@ -238,7 +244,7 @@ consumes 5% of the 30-day error budget — a 36-hour window.
         - Calculating rates over longer windows can be expensive in terms of memory or I/O operations, 
           due to the large number of data points.
 - 3: Incrementing Alert Duration. Most monitoring systems allow you to add a duration parameter to the alert criteria 
-so the alert won’t fire unless the value remains above the threshold for some time.
+so the alert won't fire unless the value remains above the threshold for some time.
     - `expr: job:slo_errors_per_request:ratio_rate1m{job="myjob"} > 0.001; for: 1h'`.
     - Cons:
         - Poor recall and poor detection time: Because the duration does not scale with the severity of the incident, 
@@ -251,50 +257,48 @@ so the alert won’t fire unless the value remains above the threshold for some 
         - Low recall: A 35x burn rate never alerts, but consumes all of the 30-day error budget in 20.5 hours.
         - Reset time: 58 minutes is still too long.
 - 5: Multiple Burn Rate Alerts.
-    - ```expr: (
-                 job:slo_errors_per_request:ratio_rate1h{job="myjob"} > (14.4*0.001)
-               or
-                 job:slo_errors_per_request:ratio_rate6h{job="myjob"} > (6*0.001)
-               )
-         severity: page
-         
-         expr: job:slo_errors_per_request:ratio_rate3d{job="myjob"} > 0.001
-         severity: ticket```
+    - ```
+        expr: (
+            job:slo_errors_per_request:ratio_rate1h{job="myjob"} > (14.4*0.001)
+            or
+            job:slo_errors_per_request:ratio_rate6h{job="myjob"} > (6*0.001)
+        )
+        severity: page
+        
+        expr: job:slo_errors_per_request:ratio_rate3d{job="myjob"} > 0.001
+        severity: ticket
+      ```
     - Cons:
         - More numbers, window sizes, and thresholds to manage and reason about.
         - An even longer reset time, as a result of the three-day window.
         - To avoid multiple alerts from firing if all conditions are true, you need to implement alert suppression.
-- 6: Multiwindow, Multi-Burn-Rate Alerts.
-    - ``` expr: (
-               job:slo_errors_per_request:ratio_rate1h{job="myjob"} > (14.4*0.001)
-             and
-               job:slo_errors_per_request:ratio_rate5m{job="myjob"} > (14.4*0.001)
-             )
-           or
-             (
-               job:slo_errors_per_request:ratio_rate6h{job="myjob"} > (6*0.001)
-             and
-               job:slo_errors_per_request:ratio_rate30m{job="myjob"} > (6*0.001)
-             )
-       severity: page
-       
-       expr: (
-               job:slo_errors_per_request:ratio_rate24h{job="myjob"} > (3*0.001)
-             and
-               job:slo_errors_per_request:ratio_rate2h{job="myjob"} > (3*0.001)
-             )
-           or
-             (
-               job:slo_errors_per_request:ratio_rate3d{job="myjob"} > 0.001
-             and
-               job:slo_errors_per_request:ratio_rate6h{job="myjob"} > 0.001
-             )
-       severity: ticket``` 
+- 6: Multiwindow, Multi-Burn-Rate Alerts. https://landing.google.com/sre/workbook/chapters/alerting-on-slos/#recommended_parameters_for_an_slo_based_a
+    - ```
+        expr: (
+            job:slo_errors_per_request:ratio_rate1h{job="myjob"} > (14.4*0.001)
+            and
+            job:slo_errors_per_request:ratio_rate5m{job="myjob"} > (14.4*0.001)
+        )
+        or
+        (
+            job:slo_errors_per_request:ratio_rate6h{job="myjob"} > (6*0.001)
+            and
+            job:slo_errors_per_request:ratio_rate30m{job="myjob"} > (6*0.001)
+        )
+        severity: page
+        
+        (
+            job:slo_errors_per_request:ratio_rate3d{job="myjob"} > 0.001
+            and
+            job:slo_errors_per_request:ratio_rate6h{job="myjob"} > 0.001
+        )
+        severity: ticket
+      ``` 
     - Cons:
         - Lots of parameters to specify, which can make alerting rules hard to manage.   
 
 **Fast-burn / slow-burn** strategy described here https://cloud.google.com/monitoring/service-monitoring/alerting-on-budget-burn-rate#burn-rates
-corresponds to strategy 5 above.
+corresponds to strategy 5 or 6 above.
   
 
 **Notes**:
@@ -342,8 +346,87 @@ so you should also monitor responses coming from direct dependencies.
     - programming language specific metrics: the heap and metaspace size for Java, the number of goroutines for Go.  
 - Test alerting logic: https://landing.google.com/sre/workbook/chapters/monitoring/#testing-alerting-logic.
 
-
 ### 2. Eliminating Toil
+
+**Toil** - repetitive, predictable, constant stream of tasks related to maintaining a service.
+
+**Characteristics of toil**:
+
+- **Manual**. This includes work such as manually running a script that automates some task.
+- **Repetitive**. If you're performing a task for the first time ever, or even the second time, this work is not toil. 
+  Toil is work you do over and over. If you're solving a novel problem or inventing a new solution, this work is not toil.
+- **Automatable**. If a machine could accomplish the task just as well as a human, or the need for the task could be 
+  designed away, that task is toil. If human judgment is essential for the task, there's a good chance it's not toil.
+- **Tactical**. Toil is interrupt-driven and reactive, rather than strategy-driven and proactive. 
+  Handling pager alerts is toil. We may never be able to eliminate this type of work completely, 
+  but we have to continually work toward minimizing it. 
+- **No enduring value**. If your service remains in the same state after you have finished a task, the task was 
+  probably toil. If the task produced a permanent improvement in your service, it probably wasn't toil, 
+  even if some amount of grunt work—such as digging into legacy code and configurations and straightening 
+  them out—was involved.
+- **O(n) with service growth**. If the work involved in a task scales up linearly with service size, traffic volume, 
+  or user count, that task is probably toil. An ideally managed and designed service can grow by at least one order of 
+  magnitude with zero additional work, other than some one-time efforts to add resources.
+
+Things like answering emails, expense reports, meetings, travelling is not considered toil, it's considered overhead.
+  
+The goal is to keep toil below **50%** of each SRE. Toil tends to expand if left unchecked and can quickly fill 
+100% of everyone's time. The work of reducing toil and scaling up services is the **"Engineering"** in 
+Site Reliability Engineering. Engineering work is what enables the SRE organization to scale up sublinearly 
+with service size and to manage services more efficiently than either a pure Dev team or a pure Ops team.
+
+**Measuring toil**:
+
+- Don't mix toil and project work. Concentrate toil during your on-call week.
+- Have people track their toil time.
+- Survey, sample and log toil (e.g monthly). 
+- Streamline the measurement process using tools or scripts so that collecting these measurements doesn't 
+  create additional toil! 
+  
+**Toil taxonomy**:
+
+- **Business Processes**
+- **Production Interrupts**. For example, you may need to fix an acute shortage of some resource (disk, memory, I/O) 
+  by manually freeing up disk space or restarting applications that are leaking memory. 
+- **Release Shepherding**. In many organizations, deployment tools automatically shepherd releases from development to production. 
+Depending on the tooling and release cadence, release requests, rollbacks, emergency patches, and repetitive or 
+manual configuration changes, releases may still generate toil.
+- **Migrations**. 
+- **Cost Engineering and Capacity Planning**
+- **Troubleshooting for Opaque Architectures**. Troubleshooting may require logging in to individual systems and 
+  writing ad hoc log analytics queries with scripting tools.
+
+**Toil Management Strategies**:
+
+- **Identify and Measure Toil**. See above.
+- **Engineer Toil Out of the System**. Before investing effort in managing the toil generated by your existing systems and 
+  processes, examine whether you can reduce or eliminate that toil by changing the system.
+- **Reject the Toil**. For a given set of toil, analyze the cost of responding to the toil versus not doing so. Another tactic is to intentionally delay the toil so that tasks accumulate for batch or parallelized processing.
+- **Use SLOs to Reduce Toil**. A well-defined SLO enables engineers to make informed decisions. 
+For example, you might ignore certain operational tasks if doing so does not consume or exceed the service's error budget.
+- **Start with Human-Backed Interfaces**. Consider a partially automated approach as an interim step toward full 
+  automation. In this approach, your service receives structured data—usually via a defined API—but engineers may still 
+  handle some of the resulting operations.
+- **Provide Self-Service Methods**. You can provide a web form, binary or script, API, or even just documentation 
+that tells users how to issue pull requests to your service's configuration files.
+- **Get Support from Management and Colleagues**. It is important for everyone in the organization to agree that 
+  toil reduction is a worthwhile goal.
+- **Promote Toil Reduction as a Feature**. If a complementary goal—for example, security, scalability, or 
+  reliability—is compelling to your customers, they'll be more willing to give up their current toil-generating 
+  systems for shiny new ones that aren't as toil intentive. Then, reducing toil is just a nice side effect of 
+  helping users!
+- **Start Small and Then Improve**. Automate a few high-priority items first, and then improve your solution using 
+  the time you gained by eliminating that toil
+- **Increase Uniformity**. At scale, a diverse production environment becomes exponentially harder to manage.
+  Teams are free to choose their own approaches, but they have to own the toil generated by unsupported tools or legacy systems.
+- **Assess Risk Within Automation**. Automation can save countless hours in human labor, but in the wrong circumstances, 
+  it can also trigger outages. Handle user input defensively. Minimize the impact of outages caused by incomplete 
+  safety checks of automation. Automation should default to human operators if it runs into an unsafe condition. 
+- **Automate Toil Response**. Once your process is thoroughly documented, try to break down the manual work into 
+  components that can be implemented separately and used to create a composable software library that other 
+  automation projects can reuse later.
+- **Use Open Source and Third-Party Tools**.
+- **Use Feedback to Improve**.
 
 
 ### 3. Simplicity
@@ -371,3 +454,4 @@ deals with percent of defectives based on performance specifications at a certai
 https://threatpost.com/hacker-puts-hosting-service-code-spaces-out-of-business/106761/.
 - Stalking the Wily Hacker: http://pdf.textfiles.com/academics/wilyhacker.pdf.  
 - The DevOps handbook https://www.oreilly.com/library/view/the-devops-handbook/9781457191381/.
+- class SRE implements DevOps: https://www.youtube.com/playlist?list=PLIivdWyY5sqJrKl7D2u-gmis8h9K66qoj
