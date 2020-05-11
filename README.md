@@ -8,6 +8,9 @@ SRE is "what happens when a software engineer is tasked with what used to be cal
 ### Table of Contents
 
 - [Foundations](#foundations)
+    - [1. Embracing Risk (SLOs, Error Budgets, Monitoring, Alerting)](#1-embracing-risk-slos-error-budgets-monitoring-alerting)
+    - [2. Eliminating Toil](#2-eliminating-toil)
+    - [3. Simplicity](#3-simplicity)
 - [Practices](#practices)
 - [Processes](#processes)
 - [Relation to DevOps](#relation-to-devops)
