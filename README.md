@@ -5,28 +5,12 @@ them to infrastructure and operations problems. The main goals are to create **s
 software systems. According to Ben Treynor, founder of Google's Site Reliability Team, 
 SRE is "what happens when a software engineer is tasked with what used to be called operations."
 
-SRE is closely related to DevOps.
-
-**DevOps** is a set of practices that combines software development (Dev) and information-technology operations (Ops) 
-which aims to shorten the systems development life cycle and provide continuous delivery with high software quality.
-
-Goals of DevOps:
-
-- Improved deployment frequency;
-- Faster time to market;
-- Lower failure rate of new releases;
-- Shortened lead time between fixes;
-- Faster mean time to recovery;
-
-DevOps is more holistically defined and has many goals including quality, reliability, faster time to market, etc., 
-while SRE focuses primarily on reliability and everything else is implied. SRE is deeper in this sense and DevOps
-is broader.
-
 ### Table of Contents
 
 - [Foundations](#foundations)
 - [Practices](#practices)
 - [Processes](#processes)
+- [Relation to DevOps](#relation-to-devops)
 
 ## Foundations
 
@@ -305,6 +289,7 @@ corresponds to strategy 5 or 6 above.
 - GCP's Monitoring service allows alerting on burn rate: 
 https://cloud.google.com/monitoring/service-monitoring/alerting-on-budget-burn-rate,
 https://cloud.google.com/monitoring/service-monitoring#slo-types.
+- Creating SLOs in Anthos: https://cloud.google.com/service-mesh/docs/observability/create-slo.
 - Extreme availability SLOs. With target monthly availability of 99.999% a 100% outage would exhaust its budget
 in 26 seconds - not enough to react. The only way to defend this level of reliability is to design the system so that
 the chance of a 100% outage is extremely low. For example if you roll out a change to 1% of the machines you will have 
@@ -431,6 +416,49 @@ that tells users how to issue pull requests to your service's configuration file
 
 ### 3. Simplicity
 
+**Complexity** can be:
+
+- **Intrinsic** - the complexity inherent in a given situation that cannot be removed from a problem definition. 
+- **Accidental** - more fluid and can be resolved with engineering effort.
+    
+For example, writing a web server entails dealing with the essential complexity of serving web pages quickly. However, if we write a web server in Java, we may introduce accidental complexity when trying to minimize the performance impact of garbage collection.    
+  
+- Push back when accidental complexity is introduced into the systems for which they are responsible.
+- Constantly strive to eliminate complexity in systems they onboard and for which they assume operational responsibility.
+
+**I Won’t Give Up My Code!**
+
+- SRE promotes practices that make it more likely that all code has an essential purpose, such as **scrutinizing code** 
+to make sure that it actually **drives business goals**, routinely **removing dead code**, 
+and building **bloat detection** into all levels of testing. 
+    
+**The "Negative Lines of Code" Metric**
+
+"The less code, the better! 1 point for adding a line of code, but 2 points for deleting a line. Bloatware is the devil."
+- Elon Musk, https://twitter.com/elonmusk/status/1211557592125857793?lang=en.
+
+*Muntzing* is the practice and technique of reducing the components inside an electronic appliance to the minimum 
+required for it to function. The term is named after the man who invented it, Earl "Madman" Muntz, a car and 
+electronics salesman who was also a self-taught electrical engineer. https://en.wikipedia.org/wiki/Muntzing    
+
+**Minimal APIs**
+
+"Perfection is finally attained not when there is no longer more to add, but when there is no 
+longer anything to take away" - Antoine de Saint Exupery.
+
+The fewer methods and arguments we provide to consumers of the API, the easier that API will be to understand, 
+and the more effort we can devote to making those methods as good as they can possibly be.
+A small, simple API is usually also a hallmark of a well-understood problem.
+
+**Modularity**
+
+Many of the rules of thumb that apply to object-oriented programming also apply to the design of distributed systems.
+A well-designed distributed system consists of collaborators, each of which has a clear and well-scoped purpose.
+      
+**Simplification is a feature**
+ 
+Reserve 10% of engineering project time for "simplicity" projects.
+
 
 ## Practices
 
@@ -441,10 +469,28 @@ that tells users how to issue pull requests to your service's configuration file
 
 ## Processes
 
-1. Organizational Change
-2. 
+1. SRE Engagement Model
+2. SRE Team Lifecycles
+3. Organizational Change
 
+## Relation to DevOps
 
+SRE is closely related to DevOps.
+
+**DevOps** is a set of practices that combines software development (Dev) and information-technology operations (Ops) 
+which aims to shorten the systems development life cycle and provide continuous delivery with high software quality.
+
+Goals of DevOps:
+
+- Improved deployment frequency;
+- Faster time to market;
+- Lower failure rate of new releases;
+- Shortened lead time between fixes;
+- Faster mean time to recovery;
+
+DevOps is more holistically defined and has many goals including quality, reliability, faster time to market, etc., 
+while SRE focuses primarily on reliability and everything else is implied. SRE is deeper in this sense and DevOps
+is broader.
 
 **Notes**:
 
@@ -455,3 +501,9 @@ https://threatpost.com/hacker-puts-hosting-service-code-spaces-out-of-business/1
 - Stalking the Wily Hacker: http://pdf.textfiles.com/academics/wilyhacker.pdf.  
 - The DevOps handbook https://www.oreilly.com/library/view/the-devops-handbook/9781457191381/.
 - class SRE implements DevOps: https://www.youtube.com/playlist?list=PLIivdWyY5sqJrKl7D2u-gmis8h9K66qoj
+
+**Resources**:
+
+- [Site Reliability Engineering](https://landing.google.com/sre/sre-book/toc/index.html)
+- [Site Reliability Workbook](https://landing.google.com/sre/workbook/toc/)
+- [Building Secure and Reliable Systems](https://static.googleusercontent.com/media/landing.google.com/en//sre/static/pdf/SRS.pdf)
