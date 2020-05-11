@@ -27,11 +27,12 @@ direct or indirect revenue loss; brand or reputational impact; and undesirable p
 - User experience is dominated by less reliable systems. Ex. mobile network is 99% reliable.
 
 A few issues to consider when determining target level of availability:
-    - What level of service will the users expect?
-    - Does this service tie directly to revenue (either our revenue, or our customers' revenue)?
-    - Is this a paid service, or is it free?
-    - If there are competitors in the marketplace, what level of service do those competitors provide?
-    - Is this service targeted at consumers, or at enterprises?
+
+- What level of service will the users expect?
+- Does this service tie directly to revenue (either our revenue, or our customers' revenue)?
+- Is this a paid service, or is it free?
+- If there are competitors in the marketplace, what level of service do those competitors provide?
+- Is this service targeted at consumers, or at enterprises?
 
 #### SLIs, SLOs, SLAs 
 
