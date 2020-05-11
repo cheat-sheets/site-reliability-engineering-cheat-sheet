@@ -11,6 +11,7 @@ SRE is "what happens when a software engineer is tasked with what used to be cal
 - [Practices](#practices)
 - [Processes](#processes)
 - [Relation to DevOps](#relation-to-devops)
+- [Resources](#resources)
 
 ## Foundations
 
@@ -502,7 +503,7 @@ https://threatpost.com/hacker-puts-hosting-service-code-spaces-out-of-business/1
 - The DevOps handbook https://www.oreilly.com/library/view/the-devops-handbook/9781457191381/.
 - class SRE implements DevOps: https://www.youtube.com/playlist?list=PLIivdWyY5sqJrKl7D2u-gmis8h9K66qoj
 
-**Resources**:
+## Resources
 
 - [Site Reliability Engineering](https://landing.google.com/sre/sre-book/toc/index.html)
 - [Site Reliability Workbook](https://landing.google.com/sre/workbook/toc/)
