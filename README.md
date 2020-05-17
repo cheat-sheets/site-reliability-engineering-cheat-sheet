@@ -307,7 +307,16 @@ https://cloud.google.com/monitoring/service-monitoring#slo-types.
 in 26 seconds - not enough to react. The only way to defend this level of reliability is to design the system so that
 the chance of a 100% outage is extremely low. For example if you roll out a change to 1% of the machines you will have 
 43 minutes before you exhaust your error budget. 
+
 - [Availability Table](https://landing.google.com/sre/sre-book/chapters/availability-table/#appendix_table-of-nines).
+
+| Availability Level | Allowed unavailability  | Allowed unavailability | Allowed unavailability |
+| --- | --- | --- | --- |
+|  | per year | per month | per day |
+| 99% | 3.7d | 7.2h | 14.4m |
+| 99.9% | 8.8h | 43.2m | 1.4m |
+| 99.99% | 52.6m | 4.3m | 8.6s |
+| 99.999% | 5.3m | 25.9s | 0.9s |
 
 
 #### Monitoring
