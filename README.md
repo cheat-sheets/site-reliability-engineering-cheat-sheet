@@ -57,6 +57,7 @@ financial — a rebate or a penalty — but they can take other forms.
 
 It's recommended to choose SLIs that can be represented as the ratio of two numbers: 
 **the number of good events divided by the total number of events**. 
+
 SLIs of this form have a couple of particularly useful properties:
 - The SLI ranges from 0% to 100%, where 0% means nothing works, and 100% means nothing is broken.
 - This style lends itself easily to the concept of an error budget: the SLO is a target percentage and the error 
@@ -199,7 +200,7 @@ a budget of 1,000 errors over that period.
 - Don't over-rely on 3rd party services. Chubby had too good of SLIs and users over-relied on it. 
   They had to make planned service outages to prevent it.
 
-#### Alerting on SLOs**:
+#### Alerting on SLOs
 
 https://landing.google.com/sre/workbook/chapters/alerting-on-slos/
 
@@ -503,6 +504,15 @@ Goals of DevOps:
 DevOps is more holistically defined and has many goals including quality, reliability, faster time to market, etc., 
 while SRE focuses primarily on reliability and everything else is implied. SRE is deeper in this sense and DevOps
 is broader.
+
+Both DevOps and SRE require discussion, management support, and buy-in from the people actually doing the work to 
+make serious progress. Implementing either of them is a journey and not a quick fix: the practice of rename-and-shame 
+is a hollow one, unlikely to yield benefit. Given that it is a more opinionated implementation 
+of how to perform operations, SRE has more concrete suggestions on how to change your work practices earlier 
+on in that journey, albeit requiring specific adaptation. DevOps, having a wider focus, is somewhat more 
+difficult to reason about and translate into concrete steps, but precisely because of that wider focus, is likely 
+to meet with weaker initial resistance. 
+[How SRE Relates to DevOps](https://landing.google.com/sre/workbook/chapters/how-sre-relates/).
 
 **Notes**:
 
