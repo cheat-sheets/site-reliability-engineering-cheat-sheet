@@ -191,7 +191,7 @@ a budget of 1,000 errors over that period.
 - If a single incident consumes more than 20% of error budget over four weeks, then the team must conduct a postmortem. 
   The postmortem must contain at least one P0 action item to address the root cause.
 - If a single class of outage consumes more than 20% of error budget over a quarter, the team must have a P0 item on 
-  their quarterly planning document2 to address the issues in the following quarter.
+  their quarterly planning document to address the issues in the following quarter.
 
 **Escalation Policy**:
 - In the event of a disagreement between parties regarding the calculation of the error budget or the specific 
