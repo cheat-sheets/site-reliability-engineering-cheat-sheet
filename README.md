@@ -49,7 +49,7 @@ A few issues to consider when determining target level of availability:
 - **SLI (Service Level Indicator)** - a carefully defined quantitative measure of some aspect of the level of 
 service that is provided. Examples: request latency, error rate, system throughput.
 - **SLO (Service Level Objective)** a target value or range of values for a service level that is measured by an SLI. 
-A natural structure for SLOs is thus **SLI ≤ target**, or **lower bound ≤ SLI ≤ upper bound**. 
+A natural structure for SLOs is thus **SLI >= target**, or **lower bound ≤ SLI ≤ upper bound**. 
 SLOs are the tool by which you measure your service's reliability.
 - **SLA (Service Level Agreement)** - an explicit or implicit contract with your users that includes consequences 
 of meeting (or missing) the SLOs they contain. The consequences are most easily recognized when they are 
@@ -133,8 +133,8 @@ There are two types of compliance periods for SLOs:
   <tr>
       <td><b>Freshness</b></td>
       <td>
-        <p>The proportion of records read from the league table that were updated recently:</p> 
-        <p>count of all data_requests for with freshness less than or equal to X minutes divided by count of all data_requests</p>
+        <p>The proportion of records read from the table that were updated recently:</p> 
+        <p>count of all data_requests with freshness less than or equal to X minutes divided by count of all data_requests</p>
       </td>
       <td>
         <p>90% of reads use data written within the previous 1 minute.</p>
